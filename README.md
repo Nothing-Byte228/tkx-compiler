@@ -63,7 +63,7 @@ ImportPython("logic")
 
 -- Создаем элементы интерфейса
 Label("Добро пожаловать в tkx Framework!", "pady=10")
-Button("Нажми меня", "pady=20", "cool.say_hello")
+Button("Нажми меня", "pady=20", "logic.say_hello")
 ```
 
 2. #### logic.py
