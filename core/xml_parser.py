@@ -1,4 +1,5 @@
 import ast
+import keyword
 import xml.etree.ElementTree as ElementTree
 
 
@@ -96,7 +97,8 @@ class XMLCompiler:
         for key, value in element.attrib.items():
             if key in {"pack", "name", "id", "command"}:
                 continue
-            keywords.append(ast.keyword(arg=key, value=self._value_node(value)))
+            argument_name = f"{key}_" if keyword.iskeyword(key) else key
+            keywords.append(ast.keyword(arg=argument_name, value=self._value_node(value)))
 
         command = element.attrib.get("command", "")
         if command:
@@ -137,17 +139,18 @@ class XMLCompiler:
                 keywords=keywords,
             ),
         ))
-        self.final_body.append(ast.Expr(
-            value=ast.Call(
-                func=ast.Attribute(
-                    value=ast.Name(id=widget_name, ctx=ast.Load()),
-                    attr="pack",
-                    ctx=ast.Load(),
-                ),
-                args=[],
-                keywords=self._pack_keywords(element),
-            )
-        ))
+        if element.tag != "Menu":
+            self.final_body.append(ast.Expr(
+                value=ast.Call(
+                    func=ast.Attribute(
+                        value=ast.Name(id=widget_name, ctx=ast.Load()),
+                        attr="pack",
+                        ctx=ast.Load(),
+                    ),
+                    args=[],
+                    keywords=self._pack_keywords(element),
+                )
+            ))
 
     def _compile_element(self, element: ElementTree.Element) -> None:
         tag = element.tag
@@ -167,6 +170,26 @@ class XMLCompiler:
                     keywords=[],
                 ),
             ))
+            if "title" in element.attrib:
+                self.final_body.append(ast.Expr(value=ast.Call(
+                    func=ast.Attribute(
+                        value=ast.Name(id=window_name, ctx=ast.Load()),
+                        attr="title",
+                        ctx=ast.Load(),
+                    ),
+                    args=[ast.Constant(value=element.attrib["title"])],
+                    keywords=[],
+                )))
+            if "size" in element.attrib:
+                self.final_body.append(ast.Expr(value=ast.Call(
+                    func=ast.Attribute(
+                        value=ast.Name(id=window_name, ctx=ast.Load()),
+                        attr="geometry",
+                        ctx=ast.Load(),
+                    ),
+                    args=[ast.Constant(value=element.attrib["size"])],
+                    keywords=[],
+                )))
             return
 
         if tag == "Window":
