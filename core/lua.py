@@ -3,7 +3,7 @@ from lupa import LuaRuntime
 
 class Lua(LuaRuntime):
     def __init__(self):
-        print("[INIT] Initializing advanced Lua runtime environment for tkx...")
+        print("Инициализирую среду выполнения Lua...")
         super().__init__()
         
         # Корневое дерево Python AST
@@ -47,12 +47,12 @@ class Lua(LuaRuntime):
         return keywords
 
     def _setup_lua_environment(self):
-        print("[BRIDGE] Injecting advanced GUI elements into Lua scope...")
+        print("Подключаю элементы графического интерфейса к Lua...")
         lua_globals = self.globals()
 
         # 1. СИСТЕМНЫЕ ФУНКЦИИ
         def lua_window(title, size):
-            print(f"[LUA CALL] Window('{title}', '{size}')")
+            print(f"Создаю окно «{title}» размером {size}")
             window_nodes = [
                 ast.Assign(targets=[ast.Name(id='root', ctx=ast.Store())], 
                            value=ast.Call(func=ast.Attribute(value=ast.Name(id='tk', ctx=ast.Load()), attr='Tk', ctx=ast.Load()), args=[], keywords=[])),
@@ -62,11 +62,11 @@ class Lua(LuaRuntime):
             self.final_body.extend(window_nodes)
 
         def lua_require(module_name):
-            print(f"[LUA CALL] Require('{module_name}')")
+            print(f"Подключаю модуль: {module_name}")
             self.final_body.append(ast.Import(names=[ast.alias(name=module_name, asname=None)]))
 
         def lua_import_python(module_name):
-            print(f"[LUA CALL] ImportPython('{module_name}')")
+            print(f"Подключаю файл логики: {module_name}.py")
             self.final_body.append(ast.Import(names=[ast.alias(name=module_name, asname=None)]))
             self.user_files.append(module_name)
 
@@ -75,7 +75,7 @@ class Lua(LuaRuntime):
         # Кнопка (Button) с поддержкой колбэков событий (третий аргумент)
         def lua_button(text, pack_args="", command_func=""):
             w_name = self._generate_widget_name("btn")
-            print(f"[LUA CALL] Button('{text}', pack='{pack_args}', command='{command_func}') -> mapped to {w_name}")
+            print(f"Создаю кнопку: «{text}»")
             
             # Собираем параметры кнопки
             btn_keywords = [ast.keyword(arg='text', value=ast.Constant(value=text))]
@@ -99,7 +99,7 @@ class Lua(LuaRuntime):
         # Текстовая метка (Label)
         def lua_label(text, pack_args=""):
             w_name = self._generate_widget_name("lbl")
-            print(f"[LUA CALL] Label('{text}', pack='{pack_args}') -> mapped to {w_name}")
+            print(f"Создаю текстовую метку: «{text}»")
             self.final_body.append(ast.Assign(
                 targets=[ast.Name(id=w_name, ctx=ast.Store())],
                 value=ast.Call(func=ast.Attribute(value=ast.Name(id='tk', ctx=ast.Load()), attr='Label', ctx=ast.Load()), args=[ast.Name(id='root', ctx=ast.Load())], keywords=[ast.keyword(arg='text', value=ast.Constant(value=text))])
@@ -111,7 +111,7 @@ class Lua(LuaRuntime):
         # Однострочное поле ввода (Entry)
         def lua_entry(pack_args=""):
             w_name = self._generate_widget_name("entry")
-            print(f"[LUA CALL] Entry(pack='{pack_args}') -> mapped to {w_name}")
+            print("Создаю поле ввода")
             self.final_body.append(ast.Assign(
                 targets=[ast.Name(id=w_name, ctx=ast.Store())],
                 value=ast.Call(func=ast.Attribute(value=ast.Name(id='tk', ctx=ast.Load()), attr='Entry', ctx=ast.Load()), args=[ast.Name(id='root', ctx=ast.Load())], keywords=[])
@@ -123,7 +123,7 @@ class Lua(LuaRuntime):
         # Многострочный текстовый блок (Text)
         def lua_text(height=10, pack_args=""):
             w_name = self._generate_widget_name("text")
-            print(f"[LUA CALL] Text(height={height}, pack='{pack_args}') -> mapped to {w_name}")
+            print(f"Создаю многострочное поле высотой {height}")
             self.final_body.append(ast.Assign(
                 targets=[ast.Name(id=w_name, ctx=ast.Store())],
                 value=ast.Call(func=ast.Attribute(value=ast.Name(id='tk', ctx=ast.Load()), attr='Text', ctx=ast.Load()), args=[ast.Name(id='root', ctx=ast.Load())], keywords=[ast.keyword(arg='height', value=ast.Constant(value=int(height)))])
@@ -135,7 +135,7 @@ class Lua(LuaRuntime):
         # Чекбокс (Checkbutton)
         def lua_checkbox(text, pack_args=""):
             w_name = self._generate_widget_name("check")
-            print(f"[LUA CALL] Checkbox('{text}', pack='{pack_args}') -> mapped to {w_name}")
+            print(f"Создаю флажок: «{text}»")
             self.final_body.append(ast.Assign(
                 targets=[ast.Name(id=w_name, ctx=ast.Store())],
                 value=ast.Call(func=ast.Attribute(value=ast.Name(id='tk', ctx=ast.Load()), attr='Checkbutton', ctx=ast.Load()), args=[ast.Name(id='root', ctx=ast.Load())], keywords=[ast.keyword(arg='text', value=ast.Constant(value=text))])
@@ -155,7 +155,7 @@ class Lua(LuaRuntime):
         lua_globals.Checkbox = lua_checkbox
 
     def compile(self, lua_code: str) -> str:
-        print("\n[COMPILE] Executing Lua source code...")
+        print("Компилирую Lua-код...")
         self.execute(lua_code)
         
         mainloop_node = ast.Expr(value=ast.Call(

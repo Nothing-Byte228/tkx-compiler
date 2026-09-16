@@ -2,18 +2,18 @@ import os
 import shutil
 import argparse
 from core.pyparser import PyParser
-from core.lua import Lua
+from core.xml_parser import XMLCompiler
 
 def main():
     # 1. Настраиваем argparse для консоли сборщика
     cli_parser = argparse.ArgumentParser(
-        description="tkx-compiler: Build zero-dependency Python GUI apps from Lua scripts."
+        description="tkx-compiler: Build zero-dependency Python GUI apps from XML markup."
     )
     
     # Позиционный аргумент: путь к папке проекта (обязательный)
     cli_parser.add_argument(
         "project_path", 
-        help="Path to the directory containing your main.lua file"
+        help="Path to the directory containing your main.xml file"
     )
     
     # Именованный аргумент: имя выходного файла (по умолчанию program.py)
@@ -36,24 +36,24 @@ def main():
     PROJ_PATH = args.project_path
     DIST_PATH = f"{PROJ_PATH}/dist"
     PACKAGES_PATH = f"{DIST_PATH}/packages"
-    MAIN_LUA_PATH = f"{PROJ_PATH}/main.lua"
+    MAIN_XML_PATH = f"{PROJ_PATH}/main.xml"
 
     # Проверяем, существует ли папка проекта и главный файл
-    if not os.path.exists(MAIN_LUA_PATH):
-        print(f"Error: Could not find main.lua at expected path: '{MAIN_LUA_PATH}'")
+    if not os.path.exists(MAIN_XML_PATH):
+        print(f"Ошибка: файл main.xml не найден по пути: {MAIN_XML_PATH}")
         return
 
-    print(f"[BUILD START] Compiling project: '{PROJ_PATH}'")
+    print(f"Начинаю сборку проекта: {PROJ_PATH}")
     
     # 2. Создаем структуру папок на диске
     os.makedirs(PACKAGES_PATH, exist_ok=True)
 
-    # 3. Читаем исходный Lua-код
-    with open(MAIN_LUA_PATH, "r", encoding="utf-8") as f:
+    # 3. Читаем XML-разметку
+    with open(MAIN_XML_PATH, "r", encoding="utf-8") as f:
         code = f.read()
 
     # 4. Транслируем Lua в Python AST
-    compiler = Lua()
+    compiler = XMLCompiler()
     done_code = compiler.compile(code)
 
     # 5. Копируем локальные файлы логики пользователя прямо в папку packages
@@ -66,9 +66,9 @@ def main():
             if os.path.exists(src_file):
                 shutil.copy2(src_file, dist_file)
                 local_modules.add(module_name)
-                print(f"[BUILD] User logic file '{module_name}.py' successfully copied to packages/")
+                print(f"Скопирован файл логики: {module_name}.py")
             else:
-                print(f"[BUILD WARN] User logic file '{src_file}' not found on disk!")
+                print(f"Предупреждение: файл логики не найден: {src_file}")
 
     # 6. Собираем внешние библиотеки и генерируем финальный код
     output_filepath = f"{DIST_PATH}/{args.output}"
@@ -79,7 +79,7 @@ def main():
         
         for module in imports:
             if module in local_modules:
-                print(f"[BUILD] Scanning dependencies inside user local module: '{module}.py'...")
+                print(f"Проверяю зависимости файла логики: {module}.py")
                 try:
                     user_module_path = f"{PROJ_PATH}/{module}.py"
                     with open(user_module_path, "r", encoding="utf-8") as mf:
@@ -92,7 +92,7 @@ def main():
                         # Передаем флаг verbose из аргументов консоли!
                         parser.add_import_recursive(sub_mod, PACKAGES_PATH, verbose=args.verbose)
                 except Exception as e:
-                    print(f"[BUILD ERROR] Failed to parse local module '{module}.py' dependencies: {e}")
+                    print(f"Ошибка при проверке зависимостей файла {module}.py: {e}")
                 continue
                 
             # Передаем флаг verbose из аргументов консоли!
@@ -104,7 +104,7 @@ def main():
         # Записываем готовый скрипт
         py.write(parser.get_code())
 
-    print(f"[SUCCESS] Compilation completed successfully! Saved to: {output_filepath}")
+    print(f"Сборка завершена. Результат сохранён в: {output_filepath}")
 
 if __name__ == "__main__":
     main()

@@ -31,22 +31,14 @@ class PyParser:
         return imports
 
     def is_standard_library(self, import_name: str) -> bool:
-        """Checks if a module is part of the Python Standard Library."""
-        base_name = import_name.split('.')[0]
-        
+        base_name = import_name.split(".", 1)[0]
+
         if base_name in sys.builtin_module_names:
             return True
-            
-        try:
-            spec = importlib.util.find_spec(base_name)
-            if spec is not None and spec.origin:
-                origin_path = os.path.normpath(spec.origin).lower()
-                if origin_path.startswith(STDLIB_PATH) or origin_path.startswith(PLATSTDLIB_PATH):
-                    if "site-packages" not in origin_path:
-                        return True
-        except Exception:
-            return False
-            
+
+        if base_name in sys.stdlib_module_names:
+            return True
+
         return False
 
     def add_import(self, import_name: str, dist_path: str = "packages", verbose: bool = False) -> str | None:
@@ -54,7 +46,7 @@ class PyParser:
         base_name = import_name.split('.')[0]
 
         if self.is_standard_library(import_name):
-            if verbose: print(f"[SKIP] '{import_name}' is a standard library module.")
+            if verbose: print(f"Пропускаю стандартный модуль: {import_name}")
             return None
 
         try:
@@ -76,7 +68,7 @@ class PyParser:
                 return os.path.join(destination, "__init__.py")
                 
             shutil.copytree(module_dir, destination)
-            print(f"Package '{base_name}' -> {destination}")
+            print(f"Скопирован пакет {base_name}: {destination}")
             return os.path.join(destination, "__init__.py")
         else:
             destination = os.path.join(dist_path, os.path.basename(origin_path))
@@ -84,7 +76,7 @@ class PyParser:
                 return destination
                 
             shutil.copy2(origin_path, destination)
-            print(f"Module file '{base_name}' -> {destination}")
+            print(f"Скопирован модуль {base_name}: {destination}")
             return destination
 
     def add_import_recursive(self, import_name: str, dist_path: str = "packages", processed_modules: set = None, verbose: bool = False):
@@ -150,7 +142,7 @@ class PyParser:
         - import requests.auth -> import packages.requests as requests
         - from flask import Flask -> from packages.flask import Flask
         """
-        print("Rewriting import nodes to direct 'packages.' paths...")
+        print("Обновляю пути импортов для папки packages...")
 
         class ImportPathRewriter(ast.NodeTransformer):
             def visit_Import(self, node):
@@ -168,7 +160,7 @@ class PyParser:
                     
                     # Переписываем путь импорта на корневую папку packages
                     alias.name = f"packages.{root_name}"
-                    print(f"import {root_name} -> import packages.{root_name} as {root_name}")
+                    print(f"Импорт {root_name} перенаправлен в packages.{root_name}")
                 return node
 
             def visit_ImportFrom(self, node):
@@ -184,7 +176,7 @@ class PyParser:
 
                 # Переписываем модуль, указывая на корень в packages
                 node.module = f"packages.{root_module}"
-                print(f"from {root_module} import ... -> from packages.{root_module} import ...")
+                print(f"Импорт из {root_module} перенаправлен в packages.{root_module}")
                 return node
 
         # Инициализируем трансформер и связываем его с внешним парсером
@@ -196,4 +188,4 @@ class PyParser:
         
         # Фиксируем координаты измененных узлов
         ast.fix_missing_locations(self.tree)
-        print("Import paths have been successfully hardcoded to the 'packages' directory.")
+        print("Пути импортов обновлены для папки packages.")
