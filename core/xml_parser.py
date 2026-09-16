@@ -3,11 +3,51 @@ import xml.etree.ElementTree as ElementTree
 
 
 class XMLCompiler:
+    WIDGETS = {
+        "Button": ("Button", "button"),
+        "Canvas": ("Canvas", "canvas"),
+        "Checkbutton": ("Checkbutton", "checkbutton"),
+        "Checkbox": ("Checkbutton", "check"),
+        "Combobox": ("ttk.Combobox", "combobox"),
+        "Entry": ("Entry", "entry"),
+        "Frame": ("Frame", "frame"),
+        "Label": ("Label", "label"),
+        "LabelFrame": ("LabelFrame", "labelframe"),
+        "Listbox": ("Listbox", "listbox"),
+        "Message": ("Message", "message"),
+        "PanedWindow": ("PanedWindow", "panedwindow"),
+        "Radiobutton": ("Radiobutton", "radiobutton"),
+        "Scale": ("Scale", "scale"),
+        "Scrollbar": ("Scrollbar", "scrollbar"),
+        "Spinbox": ("Spinbox", "spinbox"),
+        "Text": ("Text", "text"),
+        "Menubutton": ("Menubutton", "menubutton"),
+        "Menu": ("Menu", "menu"),
+        "TtkButton": ("ttk.Button", "ttk_button"),
+        "TtkCheckbutton": ("ttk.Checkbutton", "ttk_checkbutton"),
+        "TtkCombobox": ("ttk.Combobox", "ttk_combobox"),
+        "TtkEntry": ("ttk.Entry", "ttk_entry"),
+        "TtkFrame": ("ttk.Frame", "ttk_frame"),
+        "TtkLabel": ("ttk.Label", "ttk_label"),
+        "TtkLabelFrame": ("ttk.LabelFrame", "ttk_labelframe"),
+        "TtkNotebook": ("ttk.Notebook", "ttk_notebook"),
+        "TtkPanedWindow": ("ttk.Panedwindow", "ttk_panedwindow"),
+        "TtkProgressbar": ("ttk.Progressbar", "ttk_progressbar"),
+        "TtkRadiobutton": ("ttk.Radiobutton", "ttk_radiobutton"),
+        "TtkScale": ("ttk.Scale", "ttk_scale"),
+        "TtkScrollbar": ("ttk.Scrollbar", "ttk_scrollbar"),
+        "TtkSeparator": ("ttk.Separator", "ttk_separator"),
+        "TtkSizegrip": ("ttk.Sizegrip", "ttk_sizegrip"),
+        "TtkSpinbox": ("ttk.Spinbox", "ttk_spinbox"),
+        "TtkTreeview": ("ttk.Treeview", "ttk_treeview"),
+    }
+
     def __init__(self):
         print("Инициализирую XML-компилятор...")
         self.final_body = [
             ast.Import(names=[ast.alias(name="tkinter", asname="tk")])
         ]
+        self.ttk_imported = False
         self.widget_counts = {}
         self.user_files = []
 
@@ -39,14 +79,57 @@ class XMLCompiler:
         pack_args = element.attrib.get("pack", "")
         return self._parse_pack_args(pack_args)
 
+    def _value_node(self, value: str) -> ast.Constant:
+        if value.lower() == "true":
+            return ast.Constant(value=True)
+        if value.lower() == "false":
+            return ast.Constant(value=False)
+        if value.isdigit():
+            return ast.Constant(value=int(value))
+        try:
+            return ast.Constant(value=float(value))
+        except ValueError:
+            return ast.Constant(value=value)
+
+    def _widget_keywords(self, element: ElementTree.Element) -> list:
+        keywords = []
+        for key, value in element.attrib.items():
+            if key in {"pack", "name", "id", "command"}:
+                continue
+            keywords.append(ast.keyword(arg=key, value=self._value_node(value)))
+
+        command = element.attrib.get("command", "")
+        if command:
+            if "." in command:
+                module_name, function_name = command.split(".", 1)
+                function_node = ast.Attribute(
+                    value=ast.Name(id=module_name, ctx=ast.Load()),
+                    attr=function_name,
+                    ctx=ast.Load(),
+                )
+            else:
+                function_node = ast.Name(id=command, ctx=ast.Load())
+            keywords.append(ast.keyword(arg="command", value=function_node))
+        return keywords
+
     def _widget_call(self, element: ElementTree.Element, widget_type: str, prefix: str, keywords: list) -> None:
+        module_name = "tk"
+        if widget_type.startswith("ttk."):
+            module_name = "ttk"
+            widget_type = widget_type.removeprefix("ttk.")
+            if not self.ttk_imported:
+                self.final_body.insert(
+                    1,
+                    ast.Import(names=[ast.alias(name="tkinter.ttk", asname="ttk")]),
+                )
+                self.ttk_imported = True
         widget_name = self._generate_widget_name(prefix)
         print(f"Создаю элемент {element.tag.lower()}: {element.attrib.get('text', '')}".rstrip())
         self.final_body.append(ast.Assign(
             targets=[ast.Name(id=widget_name, ctx=ast.Store())],
             value=ast.Call(
                 func=ast.Attribute(
-                    value=ast.Name(id="tk", ctx=ast.Load()),
+                    value=ast.Name(id=module_name, ctx=ast.Load()),
                     attr=widget_type,
                     ctx=ast.Load(),
                 ),
@@ -68,6 +151,23 @@ class XMLCompiler:
 
     def _compile_element(self, element: ElementTree.Element) -> None:
         tag = element.tag
+
+        if tag == "Toplevel":
+            print("Создаю дополнительное окно")
+            window_name = self._generate_widget_name("window")
+            self.final_body.append(ast.Assign(
+                targets=[ast.Name(id=window_name, ctx=ast.Store())],
+                value=ast.Call(
+                    func=ast.Attribute(
+                        value=ast.Name(id="tk", ctx=ast.Load()),
+                        attr="Toplevel",
+                        ctx=ast.Load(),
+                    ),
+                    args=[ast.Name(id="root", ctx=ast.Load())],
+                    keywords=[],
+                ),
+            ))
+            return
 
         if tag == "Window":
             title = element.attrib.get("title", "")
@@ -113,62 +213,20 @@ class XMLCompiler:
             self.final_body.append(ast.Import(names=[ast.alias(name=module_name, asname=None)]))
             return
 
-        if tag == "ImportPython":
+        if tag == "Import":
             module_name = element.attrib.get("module", "")
             print(f"Подключаю файл логики: {module_name}.py")
             self.final_body.append(ast.Import(names=[ast.alias(name=module_name, asname=None)]))
             self.user_files.append(module_name)
             return
 
-        if tag == "Button":
-            text = element.attrib.get("text", "")
-            keywords = [ast.keyword(arg="text", value=ast.Constant(value=text))]
-            command = element.attrib.get("command", "")
-            if command:
-                if "." in command:
-                    module_name, function_name = command.split(".", 1)
-                    function_node = ast.Attribute(
-                        value=ast.Name(id=module_name, ctx=ast.Load()),
-                        attr=function_name,
-                        ctx=ast.Load(),
-                    )
-                else:
-                    function_node = ast.Name(id=command, ctx=ast.Load())
-                keywords.append(ast.keyword(arg="command", value=function_node))
-            self._widget_call(element, "Button", "btn", keywords)
-            return
-
-        if tag == "Label":
-            text = element.attrib.get("text", "")
+        if tag in self.WIDGETS:
+            widget_type, prefix = self.WIDGETS[tag]
             self._widget_call(
                 element,
-                "Label",
-                "lbl",
-                [ast.keyword(arg="text", value=ast.Constant(value=text))],
-            )
-            return
-
-        if tag == "Entry":
-            self._widget_call(element, "Entry", "entry", [])
-            return
-
-        if tag == "Text":
-            height = int(element.attrib.get("height", "10"))
-            self._widget_call(
-                element,
-                "Text",
-                "text",
-                [ast.keyword(arg="height", value=ast.Constant(value=height))],
-            )
-            return
-
-        if tag == "Checkbox":
-            text = element.attrib.get("text", "")
-            self._widget_call(
-                element,
-                "Checkbutton",
-                "check",
-                [ast.keyword(arg="text", value=ast.Constant(value=text))],
+                widget_type,
+                prefix,
+                self._widget_keywords(element),
             )
             return
 

@@ -57,11 +57,13 @@ root.mainloop()
 ```xml
 <Application>
     <Window title="Окно с TKX" size="400x300" />
-    <ImportPython module="logic" />
+    <Import module="logic" />
     <Label text="Добро пожаловать в tkx Framework!" pack="pady=10" />
     <Button text="Нажми меня" pack="pady=20" command="logic.say_hello" />
 </Application>
 ```
+
+Доступные элементы интерфейса: `Window`, `Toplevel`, `Button`, `Canvas`, `Checkbutton`, `Entry`, `Frame`, `Label`, `LabelFrame`, `Listbox`, `Message`, `PanedWindow`, `Radiobutton`, `Scale`, `Scrollbar`, `Spinbox`, `Text`, `Menu` и `Menubutton`. Также доступны основные виджеты `ttk`: `TtkButton`, `TtkCheckbutton`, `TtkCombobox`, `TtkEntry`, `TtkFrame`, `TtkLabel`, `TtkLabelFrame`, `TtkNotebook`, `TtkPanedWindow`, `TtkProgressbar`, `TtkRadiobutton`, `TtkScale`, `TtkScrollbar`, `TtkSeparator`, `TtkSizegrip`, `TtkSpinbox` и `TtkTreeview`. Атрибуты XML передаются как параметры соответствующего класса Tkinter, а атрибут `pack` задаёт параметры упаковки виджета.
 
 2. #### logic.py
 ```python
