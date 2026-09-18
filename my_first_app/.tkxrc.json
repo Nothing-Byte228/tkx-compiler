@@ -1,0 +1,14 @@
+{
+  "output_file": "program.py",
+  "dist_dir": "dist",
+  "packages_dir": "packages",
+  "verbose": false,
+  "validate_xml": true,
+  "validate_python": true,
+  "check_dependencies": true,
+  "recursive_dependencies": true,
+  "safe_paths": true,
+  "log_level": "INFO",
+  "encoding": "utf-8",
+  "max_file_size": 10485760
+}

@@ -1,0 +1,7 @@
+# Core dependencies
+# No external dependencies required for basic functionality
+
+# Optional dependencies for enhanced features
+# Uncomment if needed:
+# rich>=13.0.0  # For advanced colored CLI output
+# tqdm>=4.65.0  # For progress bars
