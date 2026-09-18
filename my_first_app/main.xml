@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<Application>
-    <Window title="myapp" size="400x300" />
-    <Label text="Welcome to tkx-compiler!" pack="pady=20" />
-    <Button text="Click Me" pack="pady=10" />
-</Application>
